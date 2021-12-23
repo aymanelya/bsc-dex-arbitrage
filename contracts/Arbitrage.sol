@@ -2,6 +2,8 @@
 pragma solidity ^0.8.0;
 
 import './interfaces/WBNB.sol';
+import './interfaces/IChiToken.sol';
+
 import './libraries/PancakeLibrary.sol';
 
 import './interfaces/IUniswapV2Factory.sol';
@@ -14,17 +16,26 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Arbitrage is Ownable {
     using SafeMath for uint;
-
+    
     event gotFlashloan(uint amount,address tokenBorrow);
 
     fallback() external payable {}
 
+    IChiToken constant chiToken = 0x0000000000004946c0e9F43F4Dee607b0eF1fA1c;
+    
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "vSwap: EXPIRED");
         _;
     }
+    
+     modifier gasTokenRefund {
+        uint256 gasStart = gasleft();
+        _;
+        uint256 gasSpent = 21000 + gasStart - gasleft() + 16 * msg.data.length;
+        chiToken.freeUpTo((gasSpent + 14154) / 41947);
+    }
 
- function safeTransferFrom(address token,address from,address to,uint256 value) internal {
+    function safeTransferFrom(address token,address from,address to,uint256 value) internal {
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(0x23b872dd, from, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))),"TransferHelper: TRANSFER_FROM_FAILED");
     }
@@ -52,14 +63,14 @@ contract Arbitrage is Ownable {
         uint256[] memory fee,
         address to,
         uint256 deadline
-    ) public virtual ensure(deadline) returns (uint) {
+    ) public virtual ensure(deadline) onlyOnwer gasTokenRefund returns (uint) {
         uint256[] memory amounts = PancakeLibrary.getAmountsOut(amountIn,path,pairPath,fee);
         safeTransferFrom(path[0], address(this), pairPath[0], amounts[0]);
         _swap(amounts, path, pairPath, to);
         return amounts[amounts.length - 1];
     }
 
-    function flashWbnbSwap(uint _amountIn,address _loanFactory,address[] memory _loanPair,address[] memory _path,address[] memory _pairPath,uint[] memory _swapFees) external payable onlyOwner{
+    function flashWbnbSwap(uint _amountIn,address _loanFactory,address[] memory _loanPair,address[] memory _path,address[] memory _pairPath,uint[] memory _swapFees) external payable onlyOwner gasTokenRefund{
 
         if(msg.value>0){
             WBNB(_path[0]).deposit{value:msg.value, gas:50000}();
@@ -87,7 +98,6 @@ contract Arbitrage is Ownable {
             data
         );
     }
-
 
     function pancakeCall(address _sender,uint _amount0,uint _amount1,bytes calldata _data) external {
         (uint amountIn,address[] memory path,address[] memory pairPath,address flashFactory,uint[] memory swapFees) = abi.decode(_data, (uint, address[],address[],address,uint[]));
