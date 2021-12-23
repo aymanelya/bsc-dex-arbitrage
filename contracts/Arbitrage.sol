@@ -63,7 +63,7 @@ contract Arbitrage is Ownable {
         uint256[] memory fee,
         address to,
         uint256 deadline
-    ) public virtual ensure(deadline) onlyOnwer gasTokenRefund returns (uint) {
+    ) public virtual ensure(deadline) returns (uint) {
         uint256[] memory amounts = PancakeLibrary.getAmountsOut(amountIn,path,pairPath,fee);
         safeTransferFrom(path[0], address(this), pairPath[0], amounts[0]);
         _swap(amounts, path, pairPath, to);
