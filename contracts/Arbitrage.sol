@@ -21,7 +21,7 @@ contract Arbitrage is Ownable {
 
     fallback() external payable {}
 
-    IChiToken public chiToken = 0x0000000000004946c0e9F43F4Dee607b0eF1fA1c;
+    IChiToken constant chiToken = 0x0000000000004946c0e9F43F4Dee607b0eF1fA1c;
     
     modifier ensure(uint256 deadline) {
         require(deadline >= block.timestamp, "vSwap: EXPIRED");
