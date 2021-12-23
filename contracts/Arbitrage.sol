@@ -61,14 +61,14 @@ contract Arbitrage is Ownable {
         uint256[] memory fee,
         address to,
         uint256 deadline
-    ) public virtual ensure(deadline) gasTokenRefund returns (uint) {
+    ) public virtual ensure(deadline) onlyOnwer gasTokenRefund returns (uint) {
         uint256[] memory amounts = PancakeLibrary.getAmountsOut(amountIn,path,pairPath,fee);
         safeTransferFrom(path[0], address(this), pairPath[0], amounts[0]);
         _swap(amounts, path, pairPath, to);
         return amounts[amounts.length - 1];
     }
 
-    function flashWbnbSwap(uint _amountIn,address _loanFactory,address[] memory _loanPair,address[] memory _path,address[] memory _pairPath,uint[] memory _swapFees) external payable gasTokenRefund onlyOwner{
+    function flashWbnbSwap(uint _amountIn,address _loanFactory,address[] memory _loanPair,address[] memory _path,address[] memory _pairPath,uint[] memory _swapFees) external payable onlyOwner gasTokenRefund{
 
         if(msg.value>0){
             WBNB(_path[0]).deposit{value:msg.value, gas:50000}();
@@ -97,8 +97,7 @@ contract Arbitrage is Ownable {
         );
     }
 
-
-    function pancakeCall(address _sender,uint _amount0,uint _amount1,bytes calldata _data) external gasTokenRefund {
+    function pancakeCall(address _sender,uint _amount0,uint _amount1,bytes calldata _data) external {
         (uint amountIn,address[] memory path,address[] memory pairPath,address flashFactory,uint[] memory swapFees) = abi.decode(_data, (uint, address[],address[],address,uint[]));
 
         address token0 = IUniswapV2Pair(msg.sender).token0();
